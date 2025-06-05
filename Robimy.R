@@ -39,14 +39,45 @@ data_ts <- zoo(data[, -1], order.by = as.Date(data$TIME))
 
 #data vis
 
-plot(data$Unemployment , data$HICP_mm)
-plot(data$Pensions , data$HICP_mm)
-plot(data$Healthcare , data$HICP_mm)
-plot(data$Budget_Balance , data$HICP_mm)
-plot(data$New_Housing , data$HICP_mm)
-plot(data$Industry_Orders_mm , data$HICP_mm)
-plot(data$Current_Consumer_Confidence_Indicator , data$HICP_mm)
-plot(data$Trade_Balance , data$HICP_mm)
+ggplot(data, aes(x = Unemployment, y = HICP_mm)) +
+  geom_point() +
+  ggtitle("Unemployment vs HICP") +
+  theme_minimal()
+
+ggplot(data, aes(x = Pensions, y = HICP_mm)) +
+  geom_point() +
+  ggtitle("Pensions vs HICP") +
+  theme_minimal()
+
+ggplot(data, aes(x = Healthcare, y = HICP_mm)) +
+  geom_point() +
+  ggtitle("Healthcare vs HICP") +
+  theme_minimal()
+
+ggplot(data, aes(x = Budget_Balance, y = HICP_mm)) +
+  geom_point() +
+  ggtitle("Budget Balance vs HICP") +
+  theme_minimal()
+
+ggplot(data, aes(x = New_Housing, y = HICP_mm)) +
+  geom_point() +
+  ggtitle("New Housing vs HICP") +
+  theme_minimal()
+
+ggplot(data, aes(x = Industry_Orders_mm, y = HICP_mm)) +
+  geom_point() +
+  ggtitle("Industry Orders vs HICP") +
+  theme_minimal()
+
+ggplot(data, aes(x = Current_Consumer_Confidence_Indicator, y = HICP_mm)) +
+  geom_point() +
+  ggtitle("Consumer Confidence vs HICP") +
+  theme_minimal()
+
+ggplot(data, aes(x = Trade_Balance, y = HICP_mm)) +
+  geom_point() +
+  ggtitle("Trade Balance vs HICP") +
+  theme_minimal()
 
 #statistical tests
 adf.test(data_ts$HICP_mm)
