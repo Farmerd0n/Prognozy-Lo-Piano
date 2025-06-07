@@ -116,4 +116,5 @@ lmtest::dwtest(model$best_model)
 lmtest::bptest(model$best_model)
 coeftest(model$best_model, vcov = vcovHC(model$best_model, type = "HC1"))
 
+tseries::jarque.bera.test(residuals(model$best_model))
 
