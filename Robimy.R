@@ -111,4 +111,5 @@ model <- auto_ardl(HICP_mm ~ Pensions + Healthcare + New_Housing+Industry_Orders
 
 summary(model)
 
+summary(model$best_model)
 
