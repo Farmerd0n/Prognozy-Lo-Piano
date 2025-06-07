@@ -35,6 +35,11 @@ if (!require("strucchange")) {
 }
 
 
+if (!require(car)) {
+  install.packages("car")
+  library(car)
+}
+
 
 #data load
 data <- read_excel("Data_F.xlsx", sheet = "Arkusz1")
@@ -118,6 +123,8 @@ model <- auto_ardl(HICP_mm ~ Pensions + Healthcare + New_Housing+Industry_Orders
 summary(model)
 
 summary(model$best_model)
+
+
 lmtest::dwtest(model$best_model)
 lmtest::bptest(model$best_model)
 coeftest(model$best_model, vcov = vcovHC(model$best_model, type = "HC1"))
@@ -126,4 +133,20 @@ tseries::jarque.bera.test(residuals(model$best_model))
 
 library(strucchange)
 sctest(model$best_model, type = "CUSUM")
+
+
+
+
+
+# VIF
+vif_values <- vif(model$best_model)
+
+# PRINT RESULTS
+print(vif_values)
+
+
+
+
+
+
 
