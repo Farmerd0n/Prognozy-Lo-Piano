@@ -29,6 +29,12 @@ if (!require("ARDL")) {
 install.packages("ARDL")
 library(ARDL)
 }
+if (!require("strucchange")) {
+  install.packages("strucchange")
+  library(strucchange)
+}
+
+
 
 #data load
 data <- read_excel("Data_F.xlsx", sheet = "Arkusz1")
@@ -117,4 +123,7 @@ lmtest::bptest(model$best_model)
 coeftest(model$best_model, vcov = vcovHC(model$best_model, type = "HC1"))
 
 tseries::jarque.bera.test(residuals(model$best_model))
+
+library(strucchange)
+sctest(model$best_model, type = "CUSUM")
 
