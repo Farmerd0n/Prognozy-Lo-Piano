@@ -112,4 +112,8 @@ model <- auto_ardl(HICP_mm ~ Pensions + Healthcare + New_Housing+Industry_Orders
 summary(model)
 
 summary(model$best_model)
+lmtest::dwtest(model$best_model)
+lmtest::bptest(model$best_model)
+coeftest(model$best_model, vcov = vcovHC(model$best_model, type = "HC1"))
+
 
