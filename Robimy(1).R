@@ -142,17 +142,6 @@ corrplot(cor_matrix, method = "color", type = "upper",
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 #statistical tests
 adf.test(data_ts$HICP_mm)
 adf.test(data_ts$Unemployment) #nie stacjonarny
@@ -212,7 +201,10 @@ vif_values <- vif(ecm_model)
 # PRINT RESULTS
 print(vif_values)
 
-
+#residuals visualisation
+resid <- residuals(ecm_model)
+plot(resid, main = "Residuals of the ECM model", type = "l", col = "darkred")
+abline(h = 0, col = "blue", lty = 2)
 
 
 
