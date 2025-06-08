@@ -43,6 +43,8 @@ if (!require(car)) {
 
 # data load
 data <- read_excel("Data_F.xlsx", sheet = "Arkusz1")
+#WAŻNE ZMNIESZAM O 1 CAŁOŚĆ HICP_mm
+data$HICP_mm <- data$HICP_mm - 1
 # data_typ
 str(data$TIME)
 data$TIME <- as.Date(paste0(data$TIME, "-01"))
@@ -132,10 +134,49 @@ model <- auto_ardl(HICP_mm ~ Pensions + Healthcare + New_Housing+Industry_Orders
 # For ECM model
 model<-model$best_model
 summary(model)
+fitted_values_mod1 <- fitted(model)[, "HICP_mm"]
+fitted_df_mod1 <- data.frame(
+  TIME = index(fitted_values_mod1),
+  HICP_pred = coredata(fitted_values_mod1)
+)
+merged_df_mod1 <- merge(fitted_df_mod1, data_df[, c("TIME", "HICP_mm")], by = "TIME", all.x = TRUE)
+ggplot(merged_df_mod1, aes(x = TIME)) +
+  geom_line(aes(y = HICP_mm, color = "True Data"), size = 1) +
+  geom_line(aes(y = HICP_pred, color = "ARDL"), size = 1) +
+  labs(title = "HICP_mm vs. ARDL",
+       x = "Time",
+       y = "HICP_mm") +
+  scale_color_manual(name = "Legenda",
+                     values = c("True Data" = "blue", "ARDL" = "red")) +
+  theme_minimal()
+
+
 # Error Correction model
 bounds_f_test(model, case = 3)
 ecm_model <- uecm(model)
 summary(ecm_model)
+data_df <- data[-c(1, 2), ]
+fitted_values <- fitted(ecm_model)[, "HICP_mm"]
+fitted_df <- data.frame(
+  TIME = index(fitted_values),      # wektor dat (indeks zoo)
+  HICP_pred = coredata(fitted_values)  # dane (wartości dopasowane)
+)
+merged_df <- merge(fitted_df, data_df[, c("TIME", "HICP_mm")], by = "TIME", all.x = TRUE)
+ggplot(merged_df, aes(x = TIME)) +
+  geom_line(aes(y = HICP_mm, color = "True Data"), size = 1) +
+  geom_line(aes(y = HICP_pred, color = "ECM"), size = 1) +
+  labs(title = "HICP_mm vs model ECM",
+       x = "Time",
+       y = "HICP_mm") +
+  scale_color_manual(name = "Legend",
+                     values = c("True Data" = "blue", "ECM" = "red")) +
+  theme_minimal()
+
+
+
+#PONIŻSZE NIE DZIAŁA
+
+
 # Autocorellation residuals test (Breusch-Godfrey)
 lmtest::bgtest(model$best_model)
 # Autocorellation residuals test (Durbin-Watson)
