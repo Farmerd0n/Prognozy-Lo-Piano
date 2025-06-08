@@ -1,5 +1,5 @@
 
-#libreria 
+#libraries
 if (!require("readxl")) {
   install.packages("readxl")
   library(readxl)
@@ -40,19 +40,15 @@ if (!require(car)) {
   library(car)
 }
 
-if (!require("corrplot")) {
-  install.packages("corrplot")
-  library(corrplot)
-}
 
-#data load
+# data load
 data <- read_excel("Data_F.xlsx", sheet = "Arkusz1")
-#data_typ
+# data_typ
 str(data$TIME)
 data$TIME <- as.Date(paste0(data$TIME, "-01"))
 data_ts <- zoo(data[, -1], order.by = as.Date(data$TIME))
 
-#data vis
+# data vis
 
 ggplot(data, aes(x = Unemployment, y = HICP_mm)) +
   geom_point() +
@@ -94,55 +90,7 @@ ggplot(data, aes(x = Trade_Balance, y = HICP_mm)) +
   ggtitle("Trade Balance vs HICP") +
   theme_minimal()
 
-# CHOOSING INDEPENDENT VARIABLES
-X_vars <- data[, c("Unemployment", "Pensions", "Healthcare", "Budget_Balance", 
-                   "New_Housing", "Industry_Orders_mm", 
-                   "Current_Consumer_Confidence_Indicator", "Trade_Balance")]
-
-# dependent variable
-Y <- data$HICP_mm
-
-# Calculating correlations
-correlations <- sapply(X_vars, function(x) cor(x, Y, use = "complete.obs"))
-
-# Abbreviated variable names (adapted to the chart)
-short_names <- c("Unempl.", "Pensions", "Health", "Budget", "New_Hous", 
-                 "Ind_Orders", "Confidence", "Trade")
-
-# Creating a chart
-barplot(correlations,
-        names.arg = short_names,
-        main = "Correlation with HICP_mm",
-        ylab = "Correlation Coefficient",
-        col = "skyblue",
-        las = 2)
-
-
-
-# Zmienna zależna i niezależne
-vars_all <- data[, c("HICP_mm", "Unemployment", "Pensions", "Healthcare", 
-                     "Budget_Balance", "New_Housing", "Industry_Orders_mm", 
-                     "Current_Consumer_Confidence_Indicator", "Trade_Balance")]
-
-# Calculating the correlation matrix
-cor_matrix <- cor(vars_all, use = "complete.obs")
-
-# Shortened names
-short_names_all <- c("HICP_mm", "Unempl.", "Pensions", "Health", 
-                     "Budget", "New_Hous", "Ind_Orders", "Confidence", "Trade")
-
-# Setting short names as kolnames and rownames
-colnames(cor_matrix) <- short_names_all
-rownames(cor_matrix) <- short_names_all
-
-# Correlation chart
-corrplot(cor_matrix, method = "color", type = "upper", 
-         tl.col = "black", tl.srt = 45, addCoef.col = "black",
-         number.cex = 0.7)
-
-
-
-#statistical tests
+# statistical tests
 adf.test(data_ts$HICP_mm)
 adf.test(data_ts$Unemployment) #nie stacjonarny
 adf.test(data_ts$Pensions) #
@@ -153,13 +101,13 @@ adf.test(data_ts$Industry_Orders_mm)
 adf.test(data_ts$Current_Consumer_Confidence_Indicator) #nie stacjonarny
 adf.test(data_ts$Trade_Balance) #nie stacjonarny
 
-#diff check for non stationary
+# diff check for non stationary
 adf.test(diff(data_ts$Unemployment))
 adf.test(diff(data_ts$Budget_Balance))
 adf.test(diff(data_ts$Current_Consumer_Confidence_Indicator))
 adf.test(diff(data_ts$Trade_Balance))
 
-#adding diff
+# adding diff
 diff_Unemployment <- diff(data_ts$Unemployment)
 diff_Budget_Balance <- diff(data_ts$Budget_Balance)
 diff_Current_Consumer_Confidence_Indicator <- diff(data_ts$Current_Consumer_Confidence_Indicator)
@@ -169,42 +117,34 @@ data_trim$diff_Unemployment <- diff_Unemployment
 data_trim$diff_Budget_Balance <- diff_Budget_Balance
 data_trim$diff_Current_Consumer_Confidence_Indicator <- diff_Current_Consumer_Confidence_Indicator
 data_trim$diff_Trade_Balance  <- diff_Trade_Balance 
-#model ARDL
+# model ARDL with diff on variables
+model <- auto_ardl(HICP_mm ~ Pensions + Healthcare + New_Housing+Industry_Orders_mm+diff_Unemployment+diff_Budget_Balance+diff_Current_Consumer_Confidence_Indicator+diff_Trade_Balance, data = data_trim, max_order = 4)
+# model ARDL without diff on variables
 model <- auto_ardl(HICP_mm ~ Pensions + Healthcare + New_Housing+Industry_Orders_mm+Unemployment+Budget_Balance+Current_Consumer_Confidence_Indicator+Trade_Balance, data = data_ts, max_order = 5)
-model$top_orders
+# For ECM model
 model<-model$best_model
 summary(model)
-
-
+# Error Correction model
 bounds_f_test(model, case = 3)
 ecm_model <- uecm(model)
 summary(ecm_model)
-# Test na autokoremodel# Test na autokorelację reszt (Breusch-Godfrey)
-lmtest::bgtest(ecm_model)
-
-# Test normalności (Jarque-Bera)
-tseries::jarque.bera.test(residuals(ecm_model))
-
-# Test heteroskedastyczności (Breusch-Pagan)
-lmtest::bptest(ecm_model)
-
-coeftest(ecm_model, vcov = vcovHC(ecm_model, type = "HC1"))
-
-tseries::jarque.bera.test(residuals(ecm_model))
-
-library(strucchange)
+# Autocorellation residuals test (Breusch-Godfrey)
+lmtest::bgtest(model$best_model)
+# Autocorellation residuals test (Durbin-Watson)
+lmtest::dwtest(model$best_model)
+# Heteroskedasticity residuals test (Breusch-Pagan)
+lmtest::bptest(model$best_model)
+# Inference for Estimated Coefficients 
+coeftest(ecm_model, vcov = sandwich::vcovHC(ecm_model, type = "HC1"))
+#Normality test 
+tseries::jarque.bera.test(residuals(model$best_model))
+# Fluctuations test
 sctest(ecm_model, type = "CUSUM")
-
 # VIF
-vif_values <- vif(ecm_model)
-
-# PRINT RESULTS
+vif_values <- vif(model$best_model)
 print(vif_values)
 
-#residuals visualisation
-resid <- residuals(ecm_model)
-plot(resid, main = "Residuals of the ECM model", type = "l", col = "darkred")
-abline(h = 0, col = "blue", lty = 2)
+
 
 
 
