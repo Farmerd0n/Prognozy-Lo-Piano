@@ -40,6 +40,10 @@ if (!require(car)) {
   library(car)
 }
 
+if (!require("corrplot")) {
+  install.packages("corrplot")
+  library(corrplot)
+}
 
 #data load
 data <- read_excel("Data_F.xlsx", sheet = "Arkusz1")
@@ -102,8 +106,8 @@ Y <- data$HICP_mm
 correlations <- sapply(X_vars, function(x) cor(x, Y, use = "complete.obs"))
 
 # Abbreviated variable names (adapted to the chart)
-short_names <- c("Unempl.", "Pension", "Health", "Budget", "Housing", 
-                 "Orders", "Confidence", "Trade")
+short_names <- c("Unempl.", "Pensions", "Health", "Budget", "New_Hous", 
+                 "Ind_Orders", "Confidence", "Trade")
 
 # Creating a chart
 barplot(correlations,
@@ -115,6 +119,26 @@ barplot(correlations,
 
 
 
+# Zmienna zależna i niezależne
+vars_all <- data[, c("HICP_mm", "Unemployment", "Pensions", "Healthcare", 
+                     "Budget_Balance", "New_Housing", "Industry_Orders_mm", 
+                     "Current_Consumer_Confidence_Indicator", "Trade_Balance")]
+
+# Calculating the correlation matrix
+cor_matrix <- cor(vars_all, use = "complete.obs")
+
+# Shortened names
+short_names_all <- c("HICP_mm", "Unempl.", "Pensions", "Health", 
+                     "Budget", "New_Hous", "Ind_Orders", "Confidence", "Trade")
+
+# Setting short names as kolnames and rownames
+colnames(cor_matrix) <- short_names_all
+rownames(cor_matrix) <- short_names_all
+
+# Correlation chart
+corrplot(cor_matrix, method = "color", type = "upper", 
+         tl.col = "black", tl.srt = 45, addCoef.col = "black",
+         number.cex = 0.7)
 
 
 
