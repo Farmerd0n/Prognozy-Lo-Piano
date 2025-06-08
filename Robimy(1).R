@@ -50,6 +50,14 @@ data_ts <- zoo(data[, -1], order.by = as.Date(data$TIME))
 
 # data vis
 
+ggplot(data, aes(x = TIME, y = HICP_mm)) +
+  geom_line() +                 # linia pokazująca trend w czasie
+  labs(title = "Values of HICP_mm over time",
+       x = "Time",
+       y = "HICP_mm") +
+  theme_minimal()
+
+
 ggplot(data, aes(x = Unemployment, y = HICP_mm)) +
   geom_point() +
   ggtitle("Unemployment vs HICP") +
