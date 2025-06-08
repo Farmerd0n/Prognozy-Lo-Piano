@@ -90,6 +90,45 @@ ggplot(data, aes(x = Trade_Balance, y = HICP_mm)) +
   ggtitle("Trade Balance vs HICP") +
   theme_minimal()
 
+# CHOOSING INDEPENDENT VARIABLES
+X_vars <- data[, c("Unemployment", "Pensions", "Healthcare", "Budget_Balance", 
+                   "New_Housing", "Industry_Orders_mm", 
+                   "Current_Consumer_Confidence_Indicator", "Trade_Balance")]
+
+# dependent variable
+Y <- data$HICP_mm
+
+# Calculating correlations
+correlations <- sapply(X_vars, function(x) cor(x, Y, use = "complete.obs"))
+
+# Abbreviated variable names (adapted to the chart)
+short_names <- c("Unempl.", "Pension", "Health", "Budget", "Housing", 
+                 "Orders", "Confidence", "Trade")
+
+# Creating a chart
+barplot(correlations,
+        names.arg = short_names,
+        main = "Correlation with HICP_mm",
+        ylab = "Correlation Coefficient",
+        col = "skyblue",
+        las = 2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #statistical tests
 adf.test(data_ts$HICP_mm)
 adf.test(data_ts$Unemployment) #nie stacjonarny
