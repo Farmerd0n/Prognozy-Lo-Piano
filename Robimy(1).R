@@ -582,4 +582,38 @@ print(hw_df)
 comparison_new <- merge(comparison_new, hw_df, by = "TIME", all.x = TRUE)
 colnames(comparison_new)[colnames(comparison_new) == "Holt"] <- "HOLT_WINTERS"
 
+hw_forecast_values <- as.numeric(forecast_hw$mean)
+n <- nrow(comparison_new)
+comparison_new$HOLT_WINTERS[(n - 11):n] <- hw_forecast_values
 
+# FUll PLOT
+
+comparison_long <- comparison_new %>%
+  pivot_longer(cols = c("Actual", "ARIMA", "DYNLM", "HOLT_WINTERS"),
+               names_to = "Model",
+               values_to = "Value")
+
+
+p1 <- ggplot(comparison_long, aes(x = TIME, y = Value, color = Model)) +
+  geom_line(size = 1) +
+  labs(title = "All models vs Obersved data",
+       x = "Time",
+       y = "HICP m/m value - 1") +
+  theme_minimal()
+
+print(p1)
+
+#Forecast Focus
+
+last_18 <- comparison_long %>%
+  filter(TIME >= max(TIME) %m-% months(17))  
+
+p2 <- ggplot(last_18, aes(x = TIME, y = Value, color = Model)) +
+  geom_line(size = 1) +
+  labs(title = "Last 6 months + forecast",
+       x = "Time",
+       y = "HICP m/m value - 1") +
+  theme_minimal()
+
+
+print(p2)
