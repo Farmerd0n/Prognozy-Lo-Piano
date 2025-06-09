@@ -48,7 +48,10 @@ if (!require("sandwich")) {
   install.packages("sandwich")
   library(sandwich)
 }
-
+if (!require("lubridate")) {
+  install.packages("lubridate")
+  library(lubridate)
+}
 
 # data load
 data <- read_excel("Data_F.xlsx", sheet = "Arkusz1")
@@ -416,11 +419,22 @@ future_predictions <- extended_data[(t_last+1):(t_last+n_future), vars_to_foreca
 
 future_predictions
 
+future_predictions$TIME <- NA
+future_predictions$HICP_mm <- NA
 
 
+#Prediction block
 
+last_26_rows <- tail(data_predictors, 26)
 
-
+common_cols <- intersect(colnames(last_26_rows), colnames(future_predictions))
+future_predictions <- future_predictions[, common_cols, drop = FALSE]
+last_26_rows_subset <- last_26_rows[, common_cols, drop = FALSE]
+extended_last_26_rows <- rbind(last_26_rows_subset, future_predictions)
+last_date <- tail(extended_last_26_rows$TIME[!is.na(extended_last_26_rows$TIME)], 1)
+n_new <- sum(is.na(extended_last_26_rows$TIME))
+new_dates <- last_date %m+% months(1:n_new)
+extended_last_26_rows$TIME[is.na(extended_last_26_rows$TIME)] <- new_dates
 
 
 
