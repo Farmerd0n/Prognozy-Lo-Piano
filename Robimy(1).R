@@ -40,9 +40,13 @@ if (!require("dynlm")) {
   install.packages("dynlm")
   library(dynlm)
 }
-if (!require(car)) {
+if (!require("car")) {
   install.packages("car")
   library(car)
+}
+if (!require("sandwich")) {
+  install.packages("sandwich")
+  library(sandwich)
 }
 
 
@@ -203,26 +207,111 @@ BIC(model_dynlm) #BEST
 BIC(model_best)
 BIC(ecm_model)
 
+# model_dynlm visualization
 
-# Autocorellation residuals test (Breusch-Godfrey)
-lmtest::bgtest(model$best_model)
-# Autocorellation residuals test (Durbin-Watson)
-lmtest::dwtest(model$best_model)
-# Heteroskedasticity residuals test (Breusch-Pagan)
-lmtest::bptest(model$best_model)
-# Inference for Estimated Coefficients 
-coeftest(ecm_model, vcov = sandwich::vcovHC(ecm_model, type = "HC1"))
-#Normality test 
-tseries::jarque.bera.test(residuals(model$best_model))
-# Fluctuations test
-sctest(ecm_model, type = "CUSUM")
+data_df <- data[-c(1, 2), ]
+fitted_values_mod2 <- fitted(model_dynlm)[, "HICP_mm"]
+fitted_df_mod2 <- data.frame(
+  TIME = index(fitted_values_mod2),
+  HICP_pred = coredata(fitted_values_mod2)
+)
+merged_df_mod2 <- merge(fitted_df_mod2, data_df[, c("TIME", "HICP_mm")], by = "TIME", all.x = TRUE)
+ggplot(merged_df_mod2, aes(x = TIME)) +
+  geom_line(aes(y = HICP_mm, color = "True Data"), size = 1) +
+  geom_line(aes(y = HICP_pred, color = "DYNLM"), size = 1) +
+  labs(title = "HICP_mm vs. DYNLM",
+       x = "Time",
+       y = "HICP_mm") +
+  scale_color_manual(name = "Legenda",
+                     values = c("True Data" = "blue", "DYNLM" = "red")) +
+  theme_minimal()
+
+# TESTS
+
+dwtest(model_dynlm)  # Durbin-Watson
+bgtest(model_dynlm, order=1)  # Breusch-Godfrey order 1
+bptest(model_dynlm) # Breusch-Pagan - FAILED
+jarque.bera.test(residuals(model_dynlm)) # Jarque-Bera - FAILED
+sctest(model_dynlm, type = "OLS-CUSUM") #Stab
+sctest(model_dynlm, type = "OLS-CUSUMQ") #Stab
+
+# Correction for p-value and standard errors from heteroscedasciticty 
+robust_se <- vcovHC(model_dynlm, type = "HC1") 
+coeftest(model_dynlm, vcov = robust_se)
+
 # VIF
-vif_values <- vif(model$best_model)
-print(vif_values)
+vif(model_dynlm)
 
+# FIXING UNEMPLOYMENT VIF - old one is still best
 
+model_dynlmU0 <- dynlm(HICP_mm ~ 
+                       L(HICP_mm, 1) +   
+                       Healthcare +     # Current
+                       L(Pensions, 1) + # LAG 1
+                       Unemployment + # Current 
+                       Budget_Balance + L(Budget_Balance, 1) + L(Budget_Balance, 2) + # Current+LAG 1,2
+                       Current_Consumer_Confidence_Indicator + # Current
+                       L(New_Housing, 1) + # LAG 1
+                       L(Trade_Balance, 1) + # LAG 1
+                       L(Industry_Orders_mm, 1), # LAG 1
+                     data = data_ts)
 
+summary(model_dynlmU0)
 
+model_dynlmU1 <- dynlm(HICP_mm ~ 
+                         L(HICP_mm, 1) +   
+                         Healthcare +     # Current
+                         L(Pensions, 1) + # LAG 1
+                         L(Unemployment, 1) + # LAG 1 
+                         Budget_Balance + L(Budget_Balance, 1) + L(Budget_Balance, 2) + # Current+LAG 1,2
+                         Current_Consumer_Confidence_Indicator + # Current
+                         L(New_Housing, 1) + # LAG 1
+                         L(Trade_Balance, 1) + # LAG 1
+                         L(Industry_Orders_mm, 1), # LAG 1
+                       data = data_ts)
 
+summary(model_dynlmU1)
 
+model_dynlmU2 <- dynlm(HICP_mm ~ 
+                         L(HICP_mm, 1) +   
+                         Healthcare +     # Current
+                         L(Pensions, 1) + # LAG 1
+                         L(Unemployment, 2) + # LAG 2 
+                         Budget_Balance + L(Budget_Balance, 1) + L(Budget_Balance, 2) + # Current+LAG 1,2
+                         Current_Consumer_Confidence_Indicator + # Current
+                         L(New_Housing, 1) + # LAG 1
+                         L(Trade_Balance, 1) + # LAG 1
+                         L(Industry_Orders_mm, 1), # LAG 1
+                       data = data_ts)
 
+summary(model_dynlmU2)
+
+model_dynlmA1 <- dynlm(HICP_mm ~ 
+                         L(HICP_mm, 1) +   
+                         Healthcare +     # Current
+                         L(Pensions, 1) + # LAG 1
+                         L(Budget_Balance, 1) + L(Budget_Balance, 2) + # LAG 1,2
+                         Current_Consumer_Confidence_Indicator + # Current
+                         L(New_Housing, 1) + # LAG 1
+                         L(Trade_Balance, 1) + # LAG 1
+                         L(Industry_Orders_mm, 1), # LAG 1
+                       data = data_ts)
+
+summary(model_dynlmA1)
+
+# AIC and BIC for best contenders
+
+AIC(model_dynlm) #BEST
+AIC(model_dynlmU0)
+AIC(model_dynlmU1)
+AIC(model_dynlmU2)
+AIC(model_dynlmA1)
+
+BIC(model_dynlm) 
+BIC(model_dynlmU0)
+BIC(model_dynlmU1)
+BIC(model_dynlmU2)
+BIC(model_dynlmA1) #BEST
+
+summary(model_dynlm)
+summary(model_dynlmA1)
