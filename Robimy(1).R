@@ -364,7 +364,7 @@ vif(model_dynlm)
 
 #I JUDGE THE ORIGINAL TO BE VISUALLY BETTER
 
-# Predictor values
+# Predictor measures. The way in which data for the variables will be estimated, to be later put into the DYNLM model
 
 data_predictors <- data
 
@@ -382,9 +382,9 @@ predictor_function <- function(var, t) {
   return(result)
 }
 
-# DATA TEST BLOCK
 
-# Data for forecast
+
+# Data for forecast - using aforemtioned method to estimate teh variables for the next 12 months
 vars_to_forecast <- c(
   "Healthcare", 
   "Pensions", 
@@ -426,7 +426,7 @@ future_predictions$TIME <- NA
 future_predictions$HICP_mm <- NA
 
 
-#Prediction block - data to be rdy
+#Prediction block - early step of preparing data for the forecast
 
 last_26_rows <- tail(data_predictors, 26)
 
@@ -603,7 +603,7 @@ p1 <- ggplot(comparison_long, aes(x = TIME, y = Value, color = Model)) +
 
 print(p1)
 
-#Forecast Focus
+#Forecast Plot Focused
 
 last_18 <- comparison_long %>%
   filter(TIME >= max(TIME) %m-% months(17))  
