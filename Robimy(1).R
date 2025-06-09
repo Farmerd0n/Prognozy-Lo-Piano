@@ -12,7 +12,6 @@ if (!require("ggplot2")) {
   install.packages("ggplot2")
   library(ggplot2)
 }
-
 if (!require("lmtest")) {
   install.packages("lmtest")
   library(lmtest)
@@ -31,14 +30,16 @@ library(ARDL)
 }
 if (!require("dLagM")) {
   install.packages("dLagM")
-  library("dLagM")
+  library(dLagM)
 }
 if (!require("strucchange")) {
   install.packages("strucchange")
   library(strucchange)
 }
-
-
+if (!require("dynlm")) {
+  install.packages("dynlm")
+  library(dynlm)
+}
 if (!require(car)) {
   install.packages("car")
   library(car)
@@ -135,7 +136,7 @@ data_trim$diff_Trade_Balance  <- diff_Trade_Balance
 model <- auto_ardl(HICP_mm ~ Pensions + Healthcare + New_Housing+Industry_Orders_mm+diff_Unemployment+diff_Budget_Balance+diff_Current_Consumer_Confidence_Indicator+diff_Trade_Balance, data = data_trim, max_order = 4)
 # model ARDL without diff on variables
 model <- auto_ardl(HICP_mm ~ Pensions + Healthcare + New_Housing+Industry_Orders_mm+Unemployment+Budget_Balance+Current_Consumer_Confidence_Indicator+Trade_Balance, data = data_ts, max_order = 5)
-# For ECM model
+# ARDL and prep for ECM model
 model_best<-model$best_model
 summary(model_best)
 data_df <- data[-c(1, 2), ]
@@ -177,8 +178,30 @@ ggplot(merged_df, aes(x = TIME)) +
                      values = c("True Data" = "blue", "ECM" = "red")) +
   theme_minimal()
 
+# ARDL without extreme p value variables
+model_dynlm <- dynlm(HICP_mm ~ 
+                        L(HICP_mm, 1) +   
+                        Healthcare +     # Current
+                        L(Pensions, 1) + # LAG 1
+                        Unemployment + L(Unemployment, 1) + L(Unemployment, 2) + # Current+LAG 1,2 
+                        Budget_Balance + L(Budget_Balance, 1) + L(Budget_Balance, 2) + # Current+LAG 1,2
+                        Current_Consumer_Confidence_Indicator + # Current
+                        L(New_Housing, 1) + # LAG 1
+                        L(Trade_Balance, 1) + # LAG 1
+                        L(Industry_Orders_mm, 1), # LAG 1
+                      data = data_ts)
 
+summary(model_dynlm)
 
+# AIC and BIC 
+
+AIC(model_dynlm) #BEST
+AIC(model_best)
+AIC(ecm_model)
+
+BIC(model_dynlm) #BEST
+BIC(model_best)
+BIC(ecm_model)
 
 
 # Autocorellation residuals test (Breusch-Godfrey)
