@@ -52,6 +52,10 @@ if (!require("lubridate")) {
   install.packages("lubridate")
   library(lubridate)
 }
+if (!require("forecast")) {
+  install.packages("forecast")
+  library(forecast)
+}
 
 # data load
 data <- read_excel("Data_F.xlsx", sheet = "Arkusz1")
@@ -187,7 +191,6 @@ ggplot(merged_df, aes(x = TIME)) +
 
 # ARDL without extreme p value variables
 model_dynlm <- dynlm(HICP_mm ~ 
-                        L(HICP_mm, 1) +   
                         Healthcare +     # Current
                         L(Pensions, 1) + # LAG 1
                         Unemployment + L(Unemployment, 1) + L(Unemployment, 2) + # Current+LAG 1,2 
@@ -248,7 +251,6 @@ vif(model_dynlm)
 # FIXING UNEMPLOYMENT VIF - old one is still best
 
 model_dynlmU0 <- dynlm(HICP_mm ~ 
-                       L(HICP_mm, 1) +   
                        Healthcare +     # Current
                        L(Pensions, 1) + # LAG 1
                        Unemployment + # Current 
@@ -262,7 +264,6 @@ model_dynlmU0 <- dynlm(HICP_mm ~
 summary(model_dynlmU0)
 
 model_dynlmU1 <- dynlm(HICP_mm ~ 
-                         L(HICP_mm, 1) +   
                          Healthcare +     # Current
                          L(Pensions, 1) + # LAG 1
                          L(Unemployment, 1) + # LAG 1 
@@ -276,7 +277,6 @@ model_dynlmU1 <- dynlm(HICP_mm ~
 summary(model_dynlmU1)
 
 model_dynlmU2 <- dynlm(HICP_mm ~ 
-                         L(HICP_mm, 1) +   
                          Healthcare +     # Current
                          L(Pensions, 1) + # LAG 1
                          L(Unemployment, 2) + # LAG 2 
@@ -290,7 +290,6 @@ model_dynlmU2 <- dynlm(HICP_mm ~
 summary(model_dynlmU2)
 
 model_dynlmA1 <- dynlm(HICP_mm ~ 
-                         L(HICP_mm, 1) +   
                          Healthcare +     # Current
                          L(Pensions, 1) + # LAG 1
                          L(Budget_Balance, 1) + L(Budget_Balance, 2) + # LAG 1,2
@@ -310,11 +309,11 @@ AIC(model_dynlmU1)
 AIC(model_dynlmU2)
 AIC(model_dynlmA1)
 
-BIC(model_dynlm) 
+BIC(model_dynlm) #BEST
 BIC(model_dynlmU0)
 BIC(model_dynlmU1)
 BIC(model_dynlmU2)
-BIC(model_dynlmA1) #BEST
+BIC(model_dynlmA1) 
 
 summary(model_dynlm)
 summary(model_dynlmA1)
@@ -423,19 +422,58 @@ future_predictions$TIME <- NA
 future_predictions$HICP_mm <- NA
 
 
-#Prediction block
+#Prediction block - data to be rdy
 
 last_26_rows <- tail(data_predictors, 26)
 
 common_cols <- intersect(colnames(last_26_rows), colnames(future_predictions))
-future_predictions <- future_predictions[, common_cols, drop = FALSE]
-last_26_rows_subset <- last_26_rows[, common_cols, drop = FALSE]
-extended_last_26_rows <- rbind(last_26_rows_subset, future_predictions)
-last_date <- tail(extended_last_26_rows$TIME[!is.na(extended_last_26_rows$TIME)], 1)
-n_new <- sum(is.na(extended_last_26_rows$TIME))
-new_dates <- last_date %m+% months(1:n_new)
-extended_last_26_rows$TIME[is.na(extended_last_26_rows$TIME)] <- new_dates
 
+extended_last_26_rows <- rbind(
+  tail(data_predictors, 26)[, common_cols, drop = FALSE],
+  future_predictions[, common_cols, drop = FALSE]
+)
+
+na_idx <- which(is.na(extended_last_26_rows$TIME))
+last_date <- tail(extended_last_26_rows$TIME[!is.na(extended_last_26_rows$TIME)], 1)
+extended_last_26_rows$TIME[na_idx] <- last_date %m+% months(seq_along(na_idx))
+
+data_ready <- extended_last_26_rows
+
+#Prediction block - data to be rdy
+
+preds <- predict(model_dynlm, newdata = data_ready)
+
+data_ready$HICP_mm_Prediction <- preds
+
+#Visualization 
+
+ggplot(data_ready, aes(x = TIME)) +
+  geom_line(aes(y = HICP_mm, color = "HICP_mm (observed)"), size = 1) +
+  geom_line(aes(y = HICP_mm_Prediction, color = "HICP_mm_Prediction (predicted)"), size = 1) +
+  scale_color_manual(values = c("HICP_mm (observed)" = "blue", "HICP_mm_Prediction (predicted)" = "red")) +
+  labs(title = "Comparison of observed and predicted values of HICP_mm",
+       x = "Time",
+       y = "HICP_mm",
+       color = "Legend") +
+  theme_minimal()
+
+plot_data <- data_ready[21:32, ]
+ggplot(plot_data, aes(x = TIME)) +
+  geom_line(aes(y = HICP_mm, color = "HICP_mm"), size = 1) +
+  geom_line(aes(y = HICP_mm_Prediction, color = "HICP_mm_Prediction"), size = 1) +
+  labs(title = "Comparison of observed and predicted values of HICP_mm - short",
+       x = "Time",
+       y = "HICP_mm",
+       color = "Legend") +
+  theme_minimal() +
+  scale_color_manual(values = c("HICP_mm" = "blue", "HICP_mm_Prediction" = "red"))
+
+
+#ARIMA
+
+ts_data <- ts(data_ready$HICP_mm, start = c(2023, 2), frequency = 12)
+model_arima <- auto.arima(ts_data)
+summary(model_arima)
 
 
 
