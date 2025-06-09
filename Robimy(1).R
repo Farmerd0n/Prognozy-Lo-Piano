@@ -232,7 +232,7 @@ ggplot(merged_df_mod2, aes(x = TIME)) +
   labs(title = "HICP_mm vs. DYNLM",
        x = "Time",
        y = "HICP_mm") +
-  scale_color_manual(name = "Legenda",
+  scale_color_manual(name = "Legend",
                      values = c("True Data" = "blue", "DYNLM" = "red")) +
   theme_minimal()
 
@@ -366,7 +366,6 @@ vif(model_dynlm)
 
 # Predictor measures. The way in which data for the variables will be estimated, to be later put into the DYNLM model
 
-data_predictors <- data
 
 predictor_function <- function(var, t) {
   if (t < 24) {
@@ -397,9 +396,9 @@ vars_to_forecast <- c(
 )
 
 n_future <- 12
-t_last <- nrow(data_predictors)
+t_last <- nrow(data)
 
-extended_data <- data_predictors
+extended_data <- data
 
 for (i in 1:n_future) {
   extended_data <- rbind(extended_data, rep(NA, ncol(extended_data)))
@@ -428,12 +427,12 @@ future_predictions$HICP_mm <- NA
 
 #Prediction block - early step of preparing data for the forecast
 
-last_26_rows <- tail(data_predictors, 26)
+last_26_rows <- tail(data, 26)
 
 common_cols <- intersect(colnames(last_26_rows), colnames(future_predictions))
 
 extended_last_26_rows <- rbind(
-  tail(data_predictors, 26)[, common_cols, drop = FALSE],
+  tail(data, 26)[, common_cols, drop = FALSE],
   future_predictions[, common_cols, drop = FALSE]
 )
 
