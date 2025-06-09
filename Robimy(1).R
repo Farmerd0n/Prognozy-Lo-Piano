@@ -364,7 +364,7 @@ vif(model_dynlm)
 
 #I JUDGE THE ORIGINAL TO BE VISUALLY BETTER
 
-# Predictor measures. The way in which data for the variables will be estimated, to be later put into the DYNLM model
+# Predictor measures. The way in which data for the variables will be estimated, to be later put into the DYNLM model (50% wartość z t-12, 25% wartość z t-24, 15% średnia wartość z poprzedzającego roku, 10% średnia wartość z roku 2 lata temu)
 
 
 predictor_function <- function(var, t) {
@@ -602,7 +602,7 @@ p1 <- ggplot(comparison_long, aes(x = TIME, y = Value, color = Model)) +
 
 print(p1)
 
-#Forecast Plot Focused
+#Forecast Plot Focused on the end period 
 
 last_18 <- comparison_long %>%
   filter(TIME >= max(TIME) %m-% months(17))  
