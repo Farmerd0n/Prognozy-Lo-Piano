@@ -315,3 +315,113 @@ BIC(model_dynlmA1) #BEST
 
 summary(model_dynlm)
 summary(model_dynlmA1)
+
+# TESTS
+
+dwtest(model_dynlm)  # Durbin-Watson
+dwtest(model_dynlmA1)  # Durbin-Watson
+bgtest(model_dynlm, order=1)  # Breusch-Godfrey order 1
+bgtest(model_dynlmA1, order=1)  # Breusch-Godfrey order 1
+bptest(model_dynlm) # Breusch-Pagan - FAILED
+bptest(model_dynlmA1) # Breusch-Pagan - FAILED
+jarque.bera.test(residuals(model_dynlm)) # Jarque-Bera - FAILED
+jarque.bera.test(residuals(model_dynlmA1)) # Jarque-Bera - FAILED
+sctest(model_dynlm, type = "OLS-CUSUM") #Stab
+sctest(model_dynlmA1, type = "OLS-CUSUM") #Stab
+sctest(model_dynlm, type = "OLS-CUSUMQ") #Stab
+sctest(model_dynlmA1, type = "OLS-CUSUMQ") #Stab
+
+# Correction for p-value and standard errors from heteroscedasciticty 
+robust_se <- vcovHC(model_dynlm, type = "HC1") 
+coeftest(model_dynlm, vcov = robust_se)
+
+robust_se <- vcovHC(model_dynlmA1, type = "HC1") 
+coeftest(model_dynlmA1, vcov = robust_se)
+
+#VIS MOD A1
+
+fitted_values_A1 <- fitted(model_dynlmA1)[, "HICP_mm"]
+fitted_df_A1 <- data.frame(
+  TIME = index(fitted_values_A1),
+  HICP_pred = coredata(fitted_values_A1)
+)
+merged_df_mod2 <- merge(fitted_df_A1, data_df[, c("TIME", "HICP_mm")], by = "TIME", all.x = TRUE)
+ggplot(merged_df_mod2, aes(x = TIME)) +
+  geom_line(aes(y = HICP_mm, color = "True Data"), size = 1) +
+  geom_line(aes(y = HICP_pred, color = "DYNLM_A1"), size = 1) +
+  labs(title = "HICP_mm vs. DYNLM_A1",
+       x = "Time",
+       y = "HICP_mm") +
+  scale_color_manual(name = "Legenda",
+                     values = c("True Data" = "blue", "DYNLM_A1" = "red")) +
+  theme_minimal()
+
+#I JUDGE THE ORIGINAL TO BE VISUALLY BETTER
+
+# Predictor values
+
+data_predictors <- data
+
+predictor_function <- function(var, t) {
+  if (t < 24) {
+    stop()
+  }
+  
+  val_t12 <- var[t - 12]
+  val_t24 <- var[t - 24]
+  mean_t12_0 <- mean(var[(t - 12):(t - 1)], na.rm = TRUE)
+  mean_t24_12 <- mean(var[(t - 24):(t - 13)], na.rm = TRUE)
+  
+  result <- 0.5 * val_t12 + 0.25 * val_t24 + 0.15 * mean_t12_0 + 0.10 * mean_t24_12
+  return(result)
+}
+
+# DATA TEST BLOCK
+
+# Data for forecast
+vars_to_forecast <- c(
+  "Healthcare", 
+  "Pensions", 
+  "Unemployment", 
+  "Budget_Balance", 
+  "Current_Consumer_Confidence_Indicator", 
+  "New_Housing", 
+  "Trade_Balance", 
+  "Industry_Orders_mm"
+)
+
+n_future <- 12
+t_last <- nrow(data_predictors)
+
+extended_data <- data_predictors
+
+for (i in 1:n_future) {
+  extended_data <- rbind(extended_data, rep(NA, ncol(extended_data)))
+}
+rownames(extended_data) <- NULL
+
+for (var in vars_to_forecast) {
+  for (i in 1:n_future) {
+    t_current <- t_last + i
+    
+    var_vec <- extended_data[[var]]
+    
+    pred <- predictor_function(var_vec, t_current)
+    
+    extended_data[t_current, var] <- pred
+  }
+}
+
+future_predictions <- extended_data[(t_last+1):(t_last+n_future), vars_to_forecast]
+
+future_predictions
+
+
+
+
+
+
+
+
+
+
