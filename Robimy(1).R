@@ -29,6 +29,10 @@ if (!require("ARDL")) {
 install.packages("ARDL")
 library(ARDL)
 }
+if (!require("dLagM")) {
+  install.packages("dLagM")
+  library("dLagM")
+}
 if (!require("strucchange")) {
   install.packages("strucchange")
   library(strucchange)
@@ -132,9 +136,10 @@ model <- auto_ardl(HICP_mm ~ Pensions + Healthcare + New_Housing+Industry_Orders
 # model ARDL without diff on variables
 model <- auto_ardl(HICP_mm ~ Pensions + Healthcare + New_Housing+Industry_Orders_mm+Unemployment+Budget_Balance+Current_Consumer_Confidence_Indicator+Trade_Balance, data = data_ts, max_order = 5)
 # For ECM model
-model<-model$best_model
-summary(model)
-fitted_values_mod1 <- fitted(model)[, "HICP_mm"]
+model_best<-model$best_model
+summary(model_best)
+data_df <- data[-c(1, 2), ]
+fitted_values_mod1 <- fitted(model_best)[, "HICP_mm"]
 fitted_df_mod1 <- data.frame(
   TIME = index(fitted_values_mod1),
   HICP_pred = coredata(fitted_values_mod1)
@@ -152,14 +157,14 @@ ggplot(merged_df_mod1, aes(x = TIME)) +
 
 
 # Error Correction model
-bounds_f_test(model, case = 3)
-ecm_model <- uecm(model)
+bounds_f_test(model_best, case = 3)
+ecm_model <- uecm(model_best)
 summary(ecm_model)
 data_df <- data[-c(1, 2), ]
 fitted_values <- fitted(ecm_model)[, "HICP_mm"]
 fitted_df <- data.frame(
-  TIME = index(fitted_values),      # wektor dat (indeks zoo)
-  HICP_pred = coredata(fitted_values)  # dane (wartości dopasowane)
+  TIME = index(fitted_values),      
+  HICP_pred = coredata(fitted_values)  
 )
 merged_df <- merge(fitted_df, data_df[, c("TIME", "HICP_mm")], by = "TIME", all.x = TRUE)
 ggplot(merged_df, aes(x = TIME)) +
@@ -174,7 +179,6 @@ ggplot(merged_df, aes(x = TIME)) +
 
 
 
-#PONIŻSZE NIE DZIAŁA
 
 
 # Autocorellation residuals test (Breusch-Godfrey)
