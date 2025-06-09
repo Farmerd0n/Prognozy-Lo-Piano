@@ -562,6 +562,24 @@ ggplot(comparison_long, aes(x = TIME, y = Value, color = Model)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+#HOLT - WINTERS
 
+model_hw <- HoltWinters(ts_data)
+forecast_hw <- forecast::forecast(model_hw, h = 12)
+plot(forecast_hw)
+
+
+
+fitted_values <- fitted(model_hw)[,1]
+n_obs <- length(ts_data)
+time_hw <- seq(from = as.Date("2005-03-01"), by = "month", length.out = n_obs)
+hw_df <- data.frame(
+  TIME = time_hw,
+  Holt = c(rep(NA, n_obs - length(fitted_values)), fitted_values)
+)
+print(hw_df)
+
+comparison_new <- merge(comparison_new, hw_df, by = "TIME", all.x = TRUE)
+colnames(comparison_new)[colnames(comparison_new) == "Holt"] <- "HOLT_WINTERS"
 
 
